@@ -1,0 +1,82 @@
+# This is a task. Basically, it needs a module command. In this example, it
+# also have a `name`, which will be displayed while running the task to give a
+# better description of the running task.
+- name: install
+  # apt is our module. It installs debian packages. Here we are passing an
+  # `` variable, which is the item from `with_items`
+  yum: pkg={{item.name}}
+  # `with_items` will loop through a list and run the module passing each item
+  # as ``
+  with_items:
+    # better shell
+    - name: zsh
+    # terminal multiplexer
+    - name: tmux
+
+# This is an example of how to gather information from the machine. We
+# run a command with the "shell" module and register the result into the
+# "default_shell" variable
+- name: zsh facts
+  shell: 'echo $SHELL'
+  register: default_shell
+  # changed when determines when will this task be considered changed when running
+  # ansible. In this case, we want it to always be false, as we are just
+  # retrieving information.
+  changed_when: False
+  sudo: no
+
+- name: Cloning oh-my-zsh
+  git:
+    repo=https://github.com/robbyrussell/oh-my-zsh
+    dest=~/.oh-my-zsh
+    update=yes
+
+- name: Cloning dotfiles
+  git:
+    repo=https://github.com/adrianforsius/dotfiles-1.git
+    dest=~/dotfiles
+    update=yes
+
+- name: Placing dotfiles
+  shell: yes "yes" | ~/dotfiles/bootstrap.sh
+
+- name: Cloning vim-plug
+  git:
+    repo=https://github.com/junegunn/vim-plug.git
+    dest=~/vim-plug
+    update=yes
+
+- name: Moving vim-plug
+  file:
+    path=~/.vim/autoload
+    recurse=yes
+    state=directory
+
+- name: Moving files
+  shell: cp ~/vim-plug/plug.vim ~/.vim/autoload/plug.vim
+
+- name: Install plugins with Plug
+  shell: vim +PlugInstall +qall
+
+- name: Download fzf
+  git:
+    repo=https://github.com/junegunn/fzf.git
+    dest=~/.fzf
+    depth=1
+    update=yes
+
+- name: Install fzf
+  shell: yes "yes" | ~/.fzf/install
+
+- name: Installing dotfiles
+  shell: cd ~/dotfiles && yes "y" | ./bootstrap.sh
+
+# Now, we want to set zsh as the default shell, unless it is already the default
+# one.
+- name: make zsh default
+  shell: chsh -s /bin/zsh
+  # This task will run only when the following is true. In here, we check the
+  # value registered previously within the "default_shell" variable.
+  when: default_shell.stdout.find('/bin/zsh') == -1
+  sudo: yes
+
