@@ -6,7 +6,8 @@ dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 cd $dir
 
-source .extra
-cp .extra ~/.extra
+if [ -f ~/.extra ]; then
+  source ~/.extra
+fi
 
 ansible-playbook -i playbooks/inventory playbooks/dotfiles.yml
